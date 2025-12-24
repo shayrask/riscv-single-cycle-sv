@@ -10,6 +10,11 @@ module alu_tb;
     logic [31:0] ALUResult;
     logic        Zero;
 
+    // Simulation Variables
+    integer f;              // File descriptor
+    integer pass_count = 0; // Counter for passed tests
+    integer fail_count = 0; // Counter for failed tests
+
     // -------------------------------------------------------------------------
     // DUT Instantiation
     // -------------------------------------------------------------------------
@@ -22,65 +27,93 @@ module alu_tb;
     );
 
     // -------------------------------------------------------------------------
-    // Test Stimulus
+    // Task: Verify Operation
+    // Purpose: Automates checking, printing to console, and logging to file
+    // -------------------------------------------------------------------------
+    task verify_op(
+        input string test_name,
+        input [31:0] expected_val
+    );
+        begin
+            // Wait for combinational logic to settle
+            #10;
+
+            // Check Result
+            if (ALUResult === expected_val) begin
+                pass_count++;
+                // Print to Console
+                $display("[PASS] %s | A:0x%h B:0x%h Op:%b | Res:0x%h", 
+                         test_name, SrcA, SrcB, ALUControl, ALUResult);
+                
+                // Write to File
+                $fdisplay(f, "PASS | %-15s | Inputs: A=%h, B=%h, Op=%b | Expected: %h | Actual: %h", 
+                          test_name, SrcA, SrcB, ALUControl, expected_val, ALUResult);
+            end else begin
+                fail_count++;
+                // Print to Console
+                $display("[FAIL] %s | Expected:0x%h Got:0x%h", test_name, expected_val, ALUResult);
+                
+                // Write to File
+                $fdisplay(f, "FAIL | %-15s | Inputs: A=%h, B=%h, Op=%b | Expected: %h | Actual: %h", 
+                          test_name, SrcA, SrcB, ALUControl, expected_val, ALUResult);
+            end
+        end
+    endtask
+
+    // -------------------------------------------------------------------------
+    // Main Test Stimulus
     // -------------------------------------------------------------------------
     initial begin
-        $display("-----------------------------------------");
-        $display("Starting ALU Verification Simulation");
-        $display("-----------------------------------------");
-
-        // --- Test Case 1: ADD Operation ---
-        SrcA = 32'd10;
-        SrcB = 32'd20;
-        ALUControl = 4'b0000;   // ADD
-        #10;                    // Wait for combinational logic to settle
+        // 1. Open Log File
+        f = $fopen("reports/alu_results.txt", "w");
         
-        // Self-Checking
-        if (ALUResult === 32'd30) 
-            $display("[PASS] Test 1: ADD (10 + 20 = 30)");
-        else 
-            $display("[FAIL] Test 1: ADD. Expected 30, got %d", ALUResult);
+        // 2. Write Header to File
+        $fdisplay(f, "==================================================================================");
+        $fdisplay(f, "                        ALU SIMULATION REPORT");
+        $fdisplay(f, "==================================================================================");
+        $fdisplay(f, "STATUS | TEST NAME       | DETAILS                                        ");
+        $fdisplay(f, "-------|-----------------|--------------------------------------------------------");
 
-
-        // --- Test Case 2: SUB Operation ---
-        SrcA = 32'd100;
-        SrcB = 32'd40;
-        ALUControl = 4'b0001;   // SUB
-        #10;
-
-        if (ALUResult === 32'd60) 
-            $display("[PASS] Test 2: SUB (100 - 40 = 60)");
-        else 
-            $display("[FAIL] Test 2: SUB. Expected 60, got %d", ALUResult);
-
-
-        // --- Test Case 3: XOR Operation ---
-        SrcA = 32'hF0F0F0F0;
-        SrcB = 32'hFFFF0000;
-        ALUControl = 4'b0100;   // XOR
-        #10;
-
-        if (ALUResult === 32'h0F0FF0F0) 
-            $display("[PASS] Test 3: XOR (Bitwise check)");
-        else 
-            $display("[FAIL] Test 3: XOR. Expected 0F0FF0F0, got %h", ALUResult);
-
-
-        // --- Test Case 4: Shift Left Logical (SLL) ---
-        SrcA = 32'b0000_0001;   // 1
-        SrcB = 32'd4;           // Shift by 4
-        ALUControl = 4'b0101;   // SLL
-        #10;
-
-        if (ALUResult === 32'b0001_0000) // 16
-            $display("[PASS] Test 4: SLL (1 << 4 = 16)");
-        else 
-            $display("[FAIL] Test 4: SLL. Expected 16, got %d", ALUResult);
-
-
-        // End Simulation
         $display("-----------------------------------------");
-        $display("Simulation Completed.");
+        $display("Starting ALU Verification...");
+        $display("-----------------------------------------");
+
+        // --- Test Case 1: ADD ---
+        SrcA = 32'd10; SrcB = 32'd20; ALUControl = 4'b0000;
+        verify_op("ADD_OP", 32'd30);
+
+        // --- Test Case 2: SUB ---
+        SrcA = 32'd100; SrcB = 32'd40; ALUControl = 4'b0001;
+        verify_op("SUB_OP", 32'd60);
+
+        // --- Test Case 3: XOR ---
+        SrcA = 32'hF0F0F0F0; SrcB = 32'hFFFF0000; ALUControl = 4'b0100;
+        verify_op("XOR_OP", 32'h0F0FF0F0);
+
+        // --- Test Case 4: SLL ---
+        SrcA = 32'b0000_0001; SrcB = 32'd4; ALUControl = 4'b0101;
+        verify_op("SLL_OP", 32'd16);
+
+        // --- Test Case 5: SRL (Shift Right) - NEW ---
+        SrcA = 32'd32;        // 100000
+        SrcB = 32'd2;         // Shift right by 2 -> 001000 (8)
+        ALUControl = 4'b0110;
+        verify_op("SRL_OP", 32'd8);
+
+        
+        // 3. Write Summary to File
+        $fdisplay(f, "----------------------------------------------------------------------------------");
+        $fdisplay(f, "SUMMARY:");
+        $fdisplay(f, "Total Tests: %0d", pass_count + fail_count);
+        $fdisplay(f, "Passed:      %0d", pass_count);
+        $fdisplay(f, "Failed:      %0d", fail_count);
+        $fdisplay(f, "==================================================================================");
+
+        // Close File
+        $fclose(f);
+
+        $display("-----------------------------------------");
+        $display("Simulation Completed. Report saved to reports/alu_results.txt");
         $display("-----------------------------------------");
         $finish;
     end
