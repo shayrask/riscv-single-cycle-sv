@@ -8,7 +8,7 @@ module alu (
     output logic        Zero        // Zero Flag
 );
 
-    always_comb begin
+    always @(*) begin
         // Default assignment to prevent latches
         ALUResult = 32'b0;
 
