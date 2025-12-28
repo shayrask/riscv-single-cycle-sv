@@ -1,5 +1,13 @@
 `timescale 1ns / 1ps
 
+//////////////////////////////////////////////////////////////////////////////////
+// Module Name:    alu_tb
+// Description:    Testbench for the Arithmetic Logic Unit (ALU).
+//                 - Generates stimulus for various ALU operations (ADD, SUB, etc.).
+//                 - Compares DUT outputs against expected values.
+//                 - Logs pass/fail results to console and "reports/alu_results.txt".
+//////////////////////////////////////////////////////////////////////////////////
+
 module alu_tb;
 
     // -------------------------------------------------------------------------
@@ -10,8 +18,10 @@ module alu_tb;
     logic [31:0] ALUResult;
     logic        Zero;
 
+    // -------------------------------------------------------------------------
     // Simulation Variables
-    integer f;              // File descriptor
+    // -------------------------------------------------------------------------
+    integer f;              // File descriptor for log file
     integer pass_count = 0; // Counter for passed tests
     integer fail_count = 0; // Counter for failed tests
 
@@ -28,7 +38,7 @@ module alu_tb;
 
     // -------------------------------------------------------------------------
     // Task: Verify Operation
-    // Purpose: Automates checking, printing to console, and logging to file
+    // Description: Automates result checking, console printing, and file logging.
     // -------------------------------------------------------------------------
     task verify_op(
         input string test_name,
@@ -38,14 +48,14 @@ module alu_tb;
             // Wait for combinational logic to settle
             #10;
 
-            // Check Result
+            // Check Result against Expected Value
             if (ALUResult === expected_val) begin
                 pass_count++;
                 // Print to Console
                 $display("[PASS] %s   | A:0x%h B:0x%h Op:%b | Res:0x%h", 
                          test_name, SrcA, SrcB, ALUControl, ALUResult);
                 
-                // Write to File
+                // Write to Log File
                 $fdisplay(f, "PASS   | %-15s | Inputs: A=%h, B=%h, Op=%b | Expected: %h | Actual: %h", 
                           test_name, SrcA, SrcB, ALUControl, expected_val, ALUResult);
             end else begin
@@ -53,7 +63,7 @@ module alu_tb;
                 // Print to Console
                 $display("[FAIL] %s   | Expected:0x%h Got:0x%h", test_name, expected_val, ALUResult);
                 
-                // Write to File
+                // Write to Log File
                 $fdisplay(f, "FAIL   | %-15s | Inputs: A=%h, B=%h, Op=%b | Expected: %h | Actual: %h", 
                           test_name, SrcA, SrcB, ALUControl, expected_val, ALUResult);
             end
@@ -66,7 +76,7 @@ module alu_tb;
     initial begin
 
         // 1. Open Log File
-        // We use "a" so we will be in APPEND mode
+        // Open in APPEND mode ("a") to preserve history
         f = $fopen("reports/alu_results.txt", "a");
 
         if (f == 0) begin
@@ -74,7 +84,7 @@ module alu_tb;
             $finish;
         end
         
-        // 2. Write Header to File (Appended after date)
+        // 2. Write Header to File
         $fdisplay(f, "==================================================================================");
         $fdisplay(f, "                        ALU SIMULATION REPORT");
         $fdisplay(f, "==================================================================================");
@@ -101,7 +111,7 @@ module alu_tb;
         SrcA = 32'b0000_0001; SrcB = 32'd4; ALUControl = 4'b0101;
         verify_op("SLL_OP", 32'd16);
 
-        // --- Test Case 5: SRL (Shift Right) - NEW ---
+        // --- Test Case 5: SRL (Shift Right) ---
         SrcA = 32'd32; SrcB = 32'd2; ALUControl = 4'b0110;
         verify_op("SRL_OP", 32'd8);
 
