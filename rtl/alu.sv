@@ -28,8 +28,8 @@ module alu (
             4'b0010: ALUResult = SrcA & SrcB;        // AND
             4'b0011: ALUResult = SrcA | SrcB;        // OR
             4'b0100: ALUResult = SrcA ^ SrcB;        // XOR
-            4'b0101: ALUResult = SrcA << SrcB[4:0];  // SLL (Shift Left Logical)
-            4'b0110: ALUResult = SrcA >> SrcB[4:0];  // SRL (Shift Right Logical)
+            4'b0101: ALUResult = SrcA << SrcB;       // SLL (Shift Left Logical)
+            4'b0110: ALUResult = SrcA >> SrcB;       // SRL (Shift Right Logical)
             default: ALUResult = 32'b0;              // Default case
         endcase
     end
